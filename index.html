@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>6rA RP</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#101216;color:white;touch-action:none}
+button,input{font:inherit}.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#login{background:radial-gradient(circle at 50% 20%,#303641,#101216)}
+.card{width:min(92%,420px);background:#171a20ee;border:1px solid #ffffff18;border-radius:22px;padding:24px;box-shadow:0 15px 50px #0008}
+.logo{font-size:46px;font-weight:900;letter-spacing:5px;text-align:center}.sub{text-align:center;color:#aaa;margin:4px 0 22px}
+input{width:100%;padding:14px;margin:7px 0;border-radius:12px;border:1px solid #ffffff18;background:#0d0f13;color:#fff}
+.btn{width:100%;padding:14px;border:0;border-radius:12px;background:#e7e7e7;color:#111;font-weight:800;margin-top:8px}
+#game{display:none}.hud{position:fixed;z-index:4;top:12px;left:12px;background:#101318dd;border:1px solid #fff2;padding:10px 13px;border-radius:13px;font-size:14px}
+#menu{position:fixed;z-index:5;top:12px;right:12px;border:1px solid #fff2;background:#101318dd;color:white;border-radius:12px;padding:10px}
+#panel{display:none;position:fixed;z-index:6;inset:10% 5%;background:#171a20f5;border:1px solid #fff2;border-radius:20px;padding:18px;overflow:auto}
+.row{display:flex;gap:8px;flex-wrap:wrap}.choice{flex:1;min-width:110px;background:#242932;color:white;border:1px solid #fff2;padding:12px;border-radius:12px}
+#joy{position:fixed;z-index:4;left:18px;bottom:24px;width:125px;height:125px;border:2px solid #fff4;background:#fff1;border-radius:50%}
+#knob{position:absolute;left:34px;top:34px;width:53px;height:53px;border-radius:50%;background:#fffc}
+.action{position:fixed;z-index:4;right:22px;width:70px;height:70px;border-radius:50%;border:2px solid #fff4;background:#111c;color:white;font-size:25px}
+#car{bottom:110px}#interact{bottom:28px}
+#toast{position:fixed;z-index:10;left:50%;bottom:170px;transform:translateX(-50%);background:#111e;color:white;padding:12px 16px;border-radius:14px;display:none}
+canvas{width:100%;height:100%;display:block}
+.small{color:#aaa;font-size:13px;line-height:1.4}
+</style>
+</head>
+<body>
+<section id="login" class="screen">
+ <div class="card">
+  <div class="logo">6rA</div><div class="sub">ROLEPLAY • MOBILE</div>
+  <input id="name" placeholder="Nom du personnage" maxlength="18">
+  <input id="city" placeholder="Ville / serveur" value="6rA City">
+  <button class="btn" id="start">ENTRER DANS LA VILLE</button>
+  <p class="small">Prototype original. Les données sont sauvegardées sur cet appareil.</p>
+ </div>
+</section>
+<section id="game">
+ <canvas id="world"></canvas>
+ <div class="hud" id="hud"></div><button id="menu">☰</button>
+ <div id="joy"><div id="knob"></div></div>
+ <button class="action" id="car">🚗</button><button class="action" id="interact">✋</button>
+ <div id="toast"></div>
+ <div id="panel">
+   <h2>📱 Téléphone 6rA</h2>
+   <div id="profile"></div>
+   <h3>💼 Emplois</h3>
+   <div class="row">
+    <button class="choice" data-job="Livreur">📦 Livreur<br><small>$100</small></button>
+    <button class="choice" data-job="Taxi">🚕 Taxi<br><small>$150</small></button>
+    <button class="choice" data-job="Mécanicien">🔧 Mécanicien<br><small>$200</small></button>
+    <button class="choice" data-job="Police">👮 Police<br><small>$250</small></button>
+   </div>
+   <h3>🏠 Propriété</h3>
+   <button class="choice" id="house">Acheter une maison — $2 000</button>
+   <h3>🎒 Inventaire</h3><div id="inv" class="small"></div>
+   <button class="btn" id="close">FERMER</button>
+ </div>
+</section>
+<script>
+const canvas=document.getElementById('world'),ctx=canvas.getContext('2d');let W,H;
+let S=JSON.parse(localStorage.getItem('6raSave')||'null')||{name:'Dissix',money:500,job:'Citoyen',house:false,car:false,x:0,y:0,inv:['Téléphone']};
+function save(){localStorage.setItem('6raSave',JSON.stringify(S))}
+function resize(){W=innerWidth;H=innerHeight;canvas.width=W*devicePixelRatio;canvas.height=H*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)}addEventListener('resize',resize);resize();
+let jx=0,jy=0;
+function hud(){document.getElementById('hud').innerHTML=`👤 ${S.name}<br>💵 $${S.money.toLocaleString('fr-FR')}<br>💼 ${S.job}${S.house?' • 🏠 Maison':''}`}
+function toast(t){let e=document.getElementById('toast');e.textContent=t;e.style.display='block';clearTimeout(window.tt);window.tt=setTimeout(()=>e.style.display='none',1800)}
+function draw(){
+ ctx.fillStyle='#50545a';ctx.fillRect(0,0,W,H);
+ const ox=W/2-S.x,oy=H/2-S.y;
+ // roads
+ ctx.fillStyle='#777';for(let x=-1800;x<1800;x+=240)ctx.fillRect(x+ox,-1200+oy,72,2400);
+ for(let y=-1200;y<1200;y+=220)ctx.fillRect(-1800+ox,y+oy,3000,65);
+ // blocks
+ for(let x=-1600;x<1600;x+=180)for(let y=-1000;y<1000;y+=150){ctx.fillStyle='#252b31';ctx.fillRect(x+20+ox,y+18+oy,125,100);ctx.fillStyle='#9da9ad';for(let k=0;k<4;k++)ctx.fillRect(x+32+k*26+ox,y+30+oy,11,13)}
+ // landmarks
+ function label(x,y,t){ctx.fillStyle='#fff';ctx.font='bold 14px Arial';ctx.fillText(t,x+ox,y+oy)}
+ ctx.fillStyle='#253b2b';ctx.fillRect(-110+ox,80+oy,220,130);label(-95,150,'🏥 HÔPITAL');
+ ctx.fillStyle='#29364a';ctx.fillRect(500+ox,-250+oy,220,130);label(520,-180,'👮 POLICE');
+ ctx.fillStyle='#473b28';ctx.fillRect(-700+ox,-300+oy,220,130);label(-680,-230,'🔧 GARAGE');
+ ctx.fillStyle='#3b293d';ctx.fillRect(650+ox,400+oy,220,130);label(670,470,'🏪 CENTRE');
+ // cars
+ for(let i=0;i<16;i++){let x=-1200+(i*197)%2100,y=-900+(i*271)%1600;ctx.fillStyle=i%2?'#c64a4a':'#4b8cc8';ctx.fillRect(x+ox,y+oy,42,19)}
+ // player
+ ctx.save();ctx.translate(W/2,H/2);ctx.fillStyle=S.car?'#d9b13d':'#36d38a';ctx.fillRect(-16,-11,32,22);ctx.fillStyle='#111';ctx.fillRect(-10,-9,20,7);ctx.restore();
+}
+function loop(){let speed=S.car?5:3;S.x+=jx*speed;S.y+=jy*speed;draw();requestAnimationFrame(loop)}loop();
+const joy=document.getElementById('joy'),knob=document.getElementById('knob');
+function mv(e){e.preventDefault();let r=joy.getBoundingClientRect(),p=e.touches[0],x=p.clientX-(r.left+62),y=p.clientY-(r.top+62),d=Math.min(45,Math.hypot(x,y)),a=Math.atan2(y,x);jx=Math.cos(a)*d/45;jy=Math.sin(a)*d/45;knob.style.transform=`translate(${jx*45}px,${jy*45}px)`}
+function stop(){jx=jy=0;knob.style.transform='translate(0,0)'}
+joy.addEventListener('touchstart',mv,{passive:false});joy.addEventListener('touchmove',mv,{passive:false});joy.addEventListener('touchend',stop);
+document.getElementById('start').onclick=()=>{let n=document.getElementById('name').value.trim();if(n)S.name=n;save();document.getElementById('login').style.display='none';document.getElementById('game').style.display='block';hud();toast('Bienvenue dans 6rA City !')};
+document.getElementById('car').onclick=()=>{S.car=!S.car;save();toast(S.car?'Tu es en voiture 🚗':'Tu es à pied 👤')};
+document.getElementById('interact').onclick=()=>{S.money+=25;save();hud();toast('Petite mission terminée : +$25')};
+document.getElementById('menu').onclick=()=>{document.getElementById('panel').style.display='block';document.getElementById('profile').innerHTML=`👤 <b>${S.name}</b><br>💵 $${S.money.toLocaleString('fr-FR')}<br>💼 ${S.job}<br>🏠 ${S.house?'Propriétaire':'Sans maison'}`;document.getElementById('inv').textContent=S.inv.join(' • ')};
+document.getElementById('close').onclick=()=>document.getElementById('panel').style.display='none';
+document.querySelectorAll('[data-job]').forEach(b=>b.onclick=()=>{S.job=b.dataset.job;S.money+=({Livreur:100,Taxi:150,Mécanicien:200,Police:250}[S.job]);save();hud();toast('Emploi choisi : '+S.job);});
+document.getElementById('house').onclick=()=>{if(S.house){toast('Tu as déjà une maison 🏠');return}if(S.money>=2000){S.money-=2000;S.house=true;S.inv.push('Clés de maison');save();hud();toast('Maison achetée !')}else toast('Il te faut $2 000')};
+</script>
+</body>
+</html>
